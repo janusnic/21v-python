@@ -1,0 +1,383 @@
+## Socket Programming (in Python)
+
+### 1 Debugging code
+```
+#!/usr/bin/python 
+ 
+’’’Debug_mode_is_activated’’’ 
+ 
+# See: http://docs.python.org/2/library/constants.html 
+ 
+if __debug__: 
+    print ’This_is_printed’
+#!/usr/bin/python −O 
+#                  ˆ 
+#                  | 
+# Notice this!−−−−−+ 
+# See: http://docs.python.org/2/library/constants.html 
+ 
+’’’_Debug_mode_is_disabled’’’ 
+ 
+if __debug__: 
+    print ’This_is_not_printed’
+```
+### 2 A TCP receiver
+```
+#!/usr/bin/python 
+’’’A_simple_TCP_receiver’’’ 
+ 
+# See: http://docs.python.org/2/library/socket.html 
+ 
+import socket 
+ 
+listening_adapter = ’’ # Listen to all adapters 
+listening_port = 9999 
+listening_queue_size = 0 # Only an incomming connection at the same time 
+listening_endpoint = (listening_adapter, listening_port) 
+ 
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+sock.bind(listening_endpoint) 
+ 
+print ’I_am’, sock.getsockname(), ’and_I_am_listening_...’ 
+ 
+sock.listen(listening_queue_size) # This is a blocking command 
+connection = sock.accept() # Return the TCP connection 
+(sock, sender) = connection # Only one connection in this example, so, 
+                            # we can reuse the socket ’sock’ 
+ 
+print ’A_connection_with’, sender, ’has_been_established’ 
+ 
+longest_message_size = 100 
+message = sock.recv(longest_message_size) 
+# It waits for a TCP segment of any payload length, but as much 100 
+# bytes will be copied into the ”message” variable. 
+ 
+print ’∖’’+message+’∖’’, ’is_received_from’, sender 
+ 
+sock.close()
+```
+### 3 A TCP sender
+```
+#!/usr/bin/python 
+ 
+’’’A_simple_TCP_sender’’’ 
+ 
+# See: http://docs.python.org/2/library/socket.html 
+ 
+import socket 
+ 
+server_endpoint = (’localhost’, 9999) 
+ 
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+sock.connect(server_endpoint) 
+ 
+print ’The_connection_with’, sock.getpeername(), ’has_been_established’ 
+ 
+sock.send(’hola’) 
+ 
+sock.close()
+```
+### 4 Receiving packed data
+```
+#!/usr/bin/python 
+ 
+’’’A_packed_data_receiver’’’ 
+ 
+# See: http://docs.python.org/2/library/struct.html 
+ 
+import socket 
+import struct 
+ 
+max_message_size = 100 
+ 
+listening_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+listening_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
+listening_socket.bind((’’, 9999)) 
+listening_socket.listen(1) 
+ 
+serving_socket = listening_socket.accept() 
+message = serving_socket[0].recv(max_message_size) 
+ 
+print struct.unpack(’>Bh5sf’, message) 
+ 
+serving_socket[0].close()
+```
+### 5 Sending packed data
+```
+#!/usr/bin/python 
+ 
+’’’A_packed_data_sender’’’’ 
+ 
+#_See:_http://docs.python.org/2/library/struct.html 
+ 
+import_socket 
+import_struct 
+ 
+sock_=_socket.socket(socket.AF_INET,_socket.SOCK_STREAM) 
+sock.connect((’localhost’,_9999)) 
+ 
+unsigned_int8_=_3 
+signed_int16_=_−2442 
+string_=_”Hello” 
+float32_=_3.14 
+ 
+message_=_’’ 
+message_+=_struct.pack(’B’,_unsigned_int8) 
+message_+=_struct.pack(’>h’,_signed_int16) 
+message_+=_string 
+message_+=_struct.pack(’>f’,_float32) 
+ 
+sock.sendall(message) 
+ 
+sock.close()
+```
+### 6 An iterative TCP server
+```
+#!/usr/bin/python 
+ 
+’’’An_iterative_TCP_server’’’ 
+ 
+# See: http://wiki.python.org/moin/TcpCommunication 
+# See: http://docs.python.org/2/library/socket.html 
+ 
+import socket 
+ 
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+if __debug__: 
+    # Reuse the port now 
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
+sock.bind((’’, 9999)) 
+print ”Waiting_for_connections_...” 
+sock.listen(0) 
+ 
+while True: 
+ 
+    connection = sock.accept() 
+    message = connection[0].recv(100) 
+    print ”Received”, message, ”from”, connection[1] 
+    connection[0].sendall(message.upper()) 
+    connection[0].close()
+```
+### 7 A TCP client
+```
+#!/usr/bin/python 
+ 
+’’’A_TCP_client’’’ 
+ 
+# See: http://wiki.python.org/moin/TcpCommunication 
+# See: http://docs.python.org/2/library/socket.html 
+ 
+import socket 
+ 
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+sock.connect((’localhost’, 9999)) 
+print ”I_am”, sock.getsockname() 
+ 
+message = ’hello’ 
+ 
+sock.sendall(message) 
+ 
+print ’Sent’, message, ’and_received’, sock.recv(len(message)) 
+ 
+sock.close()
+```
+### 8 A concurrent TCP server
+```
+#!/usr/bin/python 
+ 
+’’’A_concurrent_TCP_server’’’ 
+ 
+# See: http://docs.python.org/2/library/socket.html 
+# See: http://docs.python.org/2/library/struct.html 
+# See: http://docs.python.org/2/library/threading.html 
+# See: http://code.activestate.com/recipes/578247−basic−threaded−python−tcp−server 
+# See: http://stackoverflow.com/questions/4783735/problem−with−multi−threaded−python−app−and−socket−connections 
+ 
+import socket 
+import struct 
+import time 
+import threading 
+ 
+value = 0 
+ 
+class ClientHandler(threading.Thread): 
+ 
+    def __init__(self, client): 
+        threading.Thread.__init__(self) 
+        self.client_sock, self.client_addr = client 
+ 
+    def run(self): 
+ 
+        global value 
+ 
+        while True: 
+            value = int(struct.unpack(’>H’, self.client_sock.recv(struct.calcsize(’>H’)))[0]) 
+            print ”Received”, value, 
+            time.sleep(1) 
+            print ”and_sending”, value 
+ 
+            self.client_sock.sendall(struct.pack(’>H’, value)) 
+ 
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+sock.bind((’’, 9999)) 
+sock.listen(0) 
+print ”Waiting_for_clients_...” 
+ 
+while True: # Serve forever. 
+    client = sock.accept() 
+    ClientHandler(client).start()
+```
+### 9 Another TCP client (for the concurrent TCP server)
+```
+#!/usr/bin/python 
+ 
+’’’A_client_for_a_concurrent_server’’’ 
+ 
+# See: http://docs.python.org/2/library/socket.html 
+# See: http://wiki.python.org/moin/TcpCommunication 
+# See: http://docs.python.org/2/library/random.html 
+ 
+import socket 
+import struct 
+import random 
+ 
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+sock.connect((’localhost’, 9999)) 
+ 
+while True: 
+    value = int(255∗random.random()) 
+    sock.sendall(struct.pack(’>H’, value)) 
+    print ’Sent’, value, 
+    value = struct.unpack(’>H’, sock.recv(struct.calcsize(’>H’)))[0] 
+    print ’and_received’, value
+```
+### 10 Minimal UDP receiver
+```
+#!/usr/bin/python 
+ 
+’’’A_minimal_UDP_receiver’’’ 
+ 
+# See: http://wiki.python.org/moin/UdpCommunication 
+# See: http://docs.python.org/2/library/socket.html 
+ 
+import socket 
+ 
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+sock.bind((’’, 9999)) 
+ 
+(message, sender) = sock.recvfrom(1) 
+# The parameter of socket.recvfrom() indicates the number of bytes to 
+# be copied from the payload of the received datagram to the variable 
+# ”message” 
+ 
+print ’∖’’+message+’∖’’, ’received_from’, sender 
+ 
+sock.close()
+```
+### 11 Minimal UDP sender
+```
+#!/usr/bin/python 
+ 
+’’’A_minimal_UDP_sender’’’ 
+ 
+# See: http://wiki.python.org/moin/UdpCommunication 
+# See: http://docs.python.org/2/library/socket.html 
+ 
+import socket 
+ 
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+ 
+sock.sendto(’hola’, (’localhost’, 9999))
+```
+### 12 The same end-point can be used for TCP and UDP
+```
+#!/usr/bin/python 
+ 
+’’’Two_threads_in_the_same_host_can_use_the_same_end−point_for 
+different_protocols’’’ 
+ 
+# See: http://docs.python.org/2/library/socket.html 
+# See: http://docs.python.org/2/library/struct.html 
+# See: http://docs.python.org/2/library/threading.html 
+# See: http://code.activestate.com/recipes/578247−basic−threaded−python−tcp−server 
+# See: http://stackoverflow.com/questions/4783735/problem−with−multi−threaded−python−app−and−socket−connections 
+ 
+import socket 
+import struct 
+import time 
+import threading 
+ 
+value = 0 
+ 
+class TCP_Handler(threading.Thread): 
+ 
+    def __init__(self, client): 
+        threading.Thread.__init__(self) 
+        self.client_sock, self.client_addr = client 
+ 
+    def run(self): 
+ 
+        global value 
+ 
+        while True: 
+            value = int(struct.unpack(’>H’, self.client_sock.recv(struct.calcsize(’>H’)))[0]) 
+            print ”Received”, value, 
+            time.sleep(1) 
+            print ”and_sending”, value 
+ 
+            self.client_sock.sendall(struct.pack(’>H’, value)) 
+ 
+class UDP_Handler(threading.Thread): 
+ 
+    def __init__(self, sock): 
+        threading.Thread.__init__(self) 
+        self.sock = sock 
+ 
+    def run(self): 
+ 
+        global value 
+ 
+        while True: 
+            (message, sender) = self.sock.recvfrom(struct.calcsize(’>H’)) 
+            value = int(struct.unpack(’>H’, message)[0]) 
+            print ”Received”, value, 
+            time.sleep(1) 
+            print ”and_sending”, value 
+            self.sock.sendto(struct.pack(’>H’, value), sender) 
+ 
+TCP_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+TCP_sock.bind((’’, 9999)) 
+TCP_sock.listen(0) 
+print ”Waiting_for_TCP_clients_...” 
+ 
+UDP_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+UDP_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
+UDP_sock.bind((’’, TCP_sock.getsockname()[1])) 
+print ”Waiting_for_UDP_clients_...” 
+ 
+UDP_Handler(UDP_sock).start() 
+ 
+while True: # Serve forever. 
+    TCP_client = TCP_sock.accept() 
+    TCP_Handler(TCP_client).start()
+#!/usr/bin/python 
+ 
+’’’An_UDP_client_for_the_previous_concurrent_server’’’ 
+ 
+# See: http://wiki.python.org/moin/UdpCommunication 
+# See: http://docs.python.org/2/library/socket.html 
+ 
+import socket 
+import struct 
+import random 
+ 
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+ 
+while True: 
+    value = int(255∗random.random()) 
+    sock.sendto(struct.pack(’>H’, value), (’localhost’, 9999)) 
+    print ’Sent’, value, 
+    (message, sender) = sock.recvfrom(struct.calcsize(’>H’)) 
+    value = struct.unpack(’>H’, message) 
+    print ’and_received’, value
+```
