@@ -454,7 +454,7 @@ sudo pip install ipython
 ```
 Замечательное видео, демонстрирующее возможности IPython:
 ----------------------------------------------------------
-[youtube width="600"]http://www.youtube.com/watch?v=H6dLGQw9yFQ#t=149[/youtube]
+[youtube width="600"](http://www.youtube.com/watch?v=H6dLGQw9yFQ#t=149[/youtube)
 
 IPython
 -------
@@ -485,7 +485,7 @@ sudo apt-get update
 sudo apt-get install python-sklearn
 ```
 Линейная регрессия в scikit-learn
-`````````````````````````````````
+----------------------------------
 Пример кода, строящего линейную регрессию для некоторого набора данных, имеющихся в пакете scikit-learn:
 
 ```
